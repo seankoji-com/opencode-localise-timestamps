@@ -1,6 +1,6 @@
 {
   "name": "opencode-localise-timestamps",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Rewrites UTC timestamps in OpenCode replies into your local timezone",
   "type": "module",
   "license": "MIT",

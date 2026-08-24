@@ -30,7 +30,7 @@
     "@opencode-ai/plugin": "^1.18.4",
     "@types/bun": "^1.2.0",
     "eslint": "^10.9.0",
-    "typescript": "^5.8.2",
+    "typescript": "^7.0.2",
     "typescript-eslint": "^8.67.0"
   }
 }

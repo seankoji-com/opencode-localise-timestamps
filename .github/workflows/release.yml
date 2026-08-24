@@ -1,0 +1,149 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Release type"
+        required: true
+        type: choice
+        default: "bugfix"
+        options:
+          - breaking
+          - minor
+          - bugfix
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  publish:
+    # Skip the redundant tag-push run when the tag was just pushed by the
+    # dispatch path below (that push is attributed to github-actions[bot]).
+    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+
+      # Dispatch path: open a release/* PR (so protected-main rules like
+      # CodeQL are satisfied via normal PR flow), wait for it to merge,
+      # then tag merged main and publish.
+      - name: Open release PR, wait for merge, tag (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          BUMP: ${{ inputs.bump }}
+          # A PAT (secret RELEASE_PAT) makes the release PR author a real
+          # maintainer, so its workflow runs skip the "awaiting approval"
+          # gate that blocks github-actions[bot]-authored PRs. Falls back
+          # to the default token (PR checks will need one manual approve).
+          GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+          HAS_PAT: ${{ secrets.RELEASE_PAT != '' }}
+        run: |
+          set -euo pipefail
+
+          if [ "$HAS_PAT" != "true" ]; then
+            echo "::notice::RELEASE_PAT secret is not set — the release PR's checks will sit in 'awaiting approval' until you approve them once. Set RELEASE_PAT to make releases fully hands-off." >&2
+          fi
+
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            echo "::error::Run the dispatch against the main branch." >&2
+            exit 1
+          fi
+
+          case "$BUMP" in
+            breaking) LEVEL="major" ;;
+            minor)    LEVEL="minor" ;;
+            bugfix)   LEVEL="patch" ;;
+            *) echo "::error::unknown release type '$BUMP'" >&2; exit 1 ;;
+          esac
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          RAW_VERSION="$(npm version "$LEVEL" --no-git-tag-version)" # e.g. "v0.2.0" or "0.2.0" depending on npm
+          NEW_TAG="v${RAW_VERSION#v}"
+          BRANCH="release/$NEW_TAG"
+
+          COUNT="$(gh pr list --head "$BRANCH" --state open --json number --jq 'length')"
+          if [ "$COUNT" -eq 0 ]; then
+            git checkout -b "$BRANCH"
+            git commit -am "chore(release): $NEW_TAG"
+            git push origin "$BRANCH"
+            gh pr create --base main --head "$BRANCH" \
+              --title "chore(release): $NEW_TAG" \
+              --body "Automated release PR — version bump only. Merging triggers the npm publish."
+          fi
+
+          PR_NUMBER="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')"
+          echo "Waiting for release PR #$PR_NUMBER to satisfy merge rules..."
+
+          MERGED=0
+          for i in $(seq 1 60); do
+            STATE="$(gh pr view "$PR_NUMBER" --json state,mergeStateStatus --jq '.state + ":" + .mergeStateStatus')"
+            case "$STATE" in
+              OPEN:CLEAN|OPEN:HAS_HOOKS)
+                gh pr merge "$PR_NUMBER" --squash --delete-branch=false
+                MERGED=1
+                break
+                ;;
+              MERGED:*)
+                MERGED=1
+                break
+                ;;
+              OPEN:BEHIND)
+                gh pr update-branch "$PR_NUMBER" || true
+                ;;
+              OPEN:*|DRAFT:*|UNKNOWN:*)
+                ;; # keep polling
+              CLOSED:*)
+                echo "::error::Release PR #$PR_NUMBER was closed without merging." >&2
+                exit 1
+                ;;
+            esac
+            if [ "$i" = "60" ]; then
+              echo "::error::Release PR #$PR_NUMBER not mergeable within 15 minutes (last state: $STATE)." >&2
+              exit 1
+            fi
+            sleep 15
+          done
+
+          if [ "$MERGED" -ne 1 ]; then
+            echo "::error::Release PR #$PR_NUMBER was not merged." >&2
+            exit 1
+          fi
+
+          # Tag the squashed commit that actually landed on main.
+          git fetch origin main
+          git checkout -B main origin/main
+          ACTUAL="$(node -p "require('./package.json').version")"
+          EXPECTED="${NEW_TAG#v}"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::merged main reports version '$ACTUAL', expected '$EXPECTED'." >&2
+            exit 1
+          fi
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - run: bun build src/index.ts --outdir dist --target bun
+
+      - run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

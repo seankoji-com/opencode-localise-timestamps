@@ -14,8 +14,7 @@ When an assistant message says *"merged by you at 03:45 UTC"*, you shouldn't hav
 
 ISO instants are replaced outright with the equivalent offset form; prose forms keep their original text and gain a parenthesised annotation, so nothing is lost.
 
-![Before and after: the same reply with UTC timestamps struck through on the left, localised on the right](./docs/assets/before-after.png)
-<sub>Illustrative mockup of the conversion, not a captured OpenCode screenshot.</sub>
+<img width="679" height="460" alt="image" src="https://github.com/user-attachments/assets/ceb364ca-08a0-435b-b1ab-74727e9b0f4f" />]
 
 ## Requirements
 

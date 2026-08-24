@@ -1,0 +1,33 @@
+{
+  "name": "opencode-localise-timestamps",
+  "version": "0.1.0",
+  "description": "Rewrites UTC timestamps in OpenCode replies into your local timezone",
+  "type": "module",
+  "license": "MIT",
+  "author": "seankoji-com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seankoji-com/opencode-localise-timestamps.git"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "timezone",
+    "timestamps",
+    "utc"
+  ],
+  "main": "./dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build src/index.ts --outdir dist --target bun"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.18.4",
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.8.2"
+  }
+}

@@ -137,6 +137,10 @@ jobs:
           git tag "$NEW_TAG"
           git push origin "$NEW_TAG"
 
+          # Read by the "Create GitHub release" step below — the tag-push
+          # trigger has no equivalent since github.ref_name already names it.
+          echo "NEW_TAG=$NEW_TAG" >> "$GITHUB_ENV"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -150,3 +154,16 @@ jobs:
         run: npm install -g npm@latest
 
       - run: npm publish --access public --provenance
+
+      # GitHub auto-drafts these from merged PR titles/labels since the
+      # previous tag. `|| gh release edit` makes a re-run of this step
+      # idempotent instead of failing on "release already exists".
+      - name: Create GitHub release with generated notes
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          TAG="${NEW_TAG:-$REF_NAME}"
+          gh release create "$TAG" --title "$TAG" --generate-notes \
+            || gh release edit "$TAG" --title "$TAG" --generate-notes

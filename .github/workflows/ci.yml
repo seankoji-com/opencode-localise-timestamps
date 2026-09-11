@@ -39,7 +39,11 @@ jobs:
       - uses: actions/checkout@v4
       # Pinned to a tag rather than actionlint's own recommended `main` ref
       # for supply-chain reproducibility.
+      # Maintained fork, not rhysd/actionlint: upstream is inactive and its
+      # latest release rejects `concurrency.queue`, which the synced gatekeeper
+      # caller uses (rhysd/actionlint#661 was closed unmerged). See
+      # seankoji-com/.github#200.
       - name: Download actionlint
         id: get_actionlint
-        run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
+        run: bash <(curl -s https://raw.githubusercontent.com/kjanat/actionlint/v1.16.1/scripts/download-actionlint.bash) 1.16.1
       - run: ${{ steps.get_actionlint.outputs.executable }} -color

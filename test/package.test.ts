@@ -18,36 +18,39 @@ function verify(overrides: Record<string, unknown> = {}, content = "export defau
     writeFileSync(join(dir, "package.json"), JSON.stringify({
       name: "package-contract-fixture", version: "1.2.3", main: "./dist/index.js", files: ["dist"], ...overrides,
     }))
-    return spawnSync(process.execPath, [verifier], {
-      cwd: dir, encoding: "utf8",
+    const result = spawnSync(process.execPath, [verifier], {
+      cwd: dir, encoding: "utf8", timeout: 20_000,
       env: { ...process.env, RELEASE_TAG: tag, npm_config_cache: join(dir, "npm-cache") },
     })
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+    if (result.error) throw result.error
+    return result
+  } finally { rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }) }
 }
 
+// npm startup on a cold Windows runner can exceed Bun's five-second default.
 describe("published package contract", () => {
   test("accepts a nonempty packed entry and matching tag", () => {
     const result = verify({}, undefined, "v1.2.3")
     expect(result.status, result.stderr).toBe(0)
-  })
+  }, 30_000)
   test("rejects a declared entry missing from the package", () => {
     expect(verify({ main: "./dist/missing.js" }).status).not.toBe(0)
-  })
+  }, 30_000)
   test("rejects files that exclude an exported chunk", () => {
     expect(verify({ exports: { "./extra": "./lib/extra.js" } }).status).not.toBe(0)
-  })
+  }, 30_000)
   test("rejects empty entry points", () => {
     expect(verify({}, "").status).not.toBe(0)
-  })
+  }, 30_000)
   test("rejects unintended source files", () => {
     expect(verify({ files: ["dist", "src"] }).status).not.toBe(0)
-  })
+  }, 30_000)
   test("rejects missing export targets", () => {
     expect(verify({ exports: { "./tui": "./dist/missing.js" } }).status).not.toBe(0)
-  })
+  }, 30_000)
   test("rejects tag and package version mismatches", () => {
     expect(verify({}, undefined, "v9.9.9").status).not.toBe(0)
-  })
+  }, 30_000)
   test("release performs package validation before remote writes", () => {
     const release = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8")
     const validation = release.indexOf("run: bun run build:verify")
@@ -57,5 +60,5 @@ describe("published package contract", () => {
     expect(release.indexOf("run: npm publish")).toBeGreaterThan(validation)
     expect(release).toContain("RELEASE_TAG:")
     expect(release).not.toContain("npm@latest")
-  })
+  }, 30_000)
 })

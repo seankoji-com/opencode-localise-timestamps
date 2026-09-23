@@ -336,3 +336,18 @@ describe("stripLocalAnnotations", () => {
     expect(stripLocalAnnotations(text)).toBe(text)
   })
 })
+
+
+describe("Sydney daylight-saving transition instants", () => {
+  test("spring transition skips the nonexistent hour", () => {
+    expect(localiseUtcTimestamps("2026-10-03T15:59:59Z / 2026-10-03T16:00:00Z", SYDNEY)).toBe(
+      "2026-10-04T01:59:59+10:00 / 2026-10-04T03:00:00+11:00",
+    )
+  })
+
+  test("autumn repeated hour retains distinct offsets", () => {
+    expect(localiseUtcTimestamps("2026-04-04T15:59:59Z / 2026-04-04T16:00:00Z", SYDNEY)).toBe(
+      "2026-04-05T02:59:59+11:00 / 2026-04-05T02:00:00+10:00",
+    )
+  })
+})

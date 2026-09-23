@@ -15,7 +15,7 @@ description: Review priorities for opencode-localise-timestamps pull requests, w
 - `README.md` prose and its edge-case table — wording, not logic; only worth a comment if it now describes behavior the code doesn't actually have.
 - `docs/assets/*` — a static screenshot, nothing to review.
 - `.github/workflows/*.yml` — mostly synced from the org's shared template (see the recurring "sync caller templates from seankoji-com/.github" PRs); treat as infra plumbing, not application logic.
-- Anything ESLint, `tsc`, or `bun test --coverage` already enforce in CI (style, types, coverage) — don't restate a CI failure as a review comment.
+- ESLint and `tsc` enforce style and types. `bun test --coverage` reports coverage without a threshold; assess missing behavior tests during review.
 
 ## Comment style
 - One comment per real issue, not one per file it repeats in.

@@ -8,9 +8,10 @@ on:
 permissions:
   contents: read
 
+# Superseded PR heads may cancel; every default-branch run keeps its own slot.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -35,11 +36,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - run: bun install --frozen-lockfile
-      - run: bun run build
-      - run: test -f dist/index.js
-      # Fails if package.json "files" would omit something dist needs, or
-      # would ship something it shouldn't (source, tests, config).
-      - run: npm pack --dry-run
+      - run: bun run build:verify
 
   lint-workflows:
     runs-on: ubuntu-latest

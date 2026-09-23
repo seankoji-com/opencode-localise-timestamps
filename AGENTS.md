@@ -16,6 +16,6 @@ idempotence; changing timezone must replace an existing annotation, not stack it
 ## Verify
 
 Run `bun install --frozen-lockfile`, `bun run lint`, `bun run typecheck`,
-`bun test --coverage`, `bun run build`, and `npm pack --dry-run`.
+`bun test --coverage`, and `bun run build:verify`. Coverage is reported without a threshold.
 CI tests Linux, macOS, and Windows. Use the package build script for releases.
 Release workflow dispatch publishes to npm; it is not a validation command.

@@ -24,7 +24,8 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "build": "bun build src/index.ts --outdir dist --target bun"
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "build:verify": "bun run build && node scripts/verify-package.mjs"
   },
   "devDependencies": {
     "@opencode-ai/plugin": "^1.18.4",

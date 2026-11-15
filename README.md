@@ -104,7 +104,7 @@ To try a local checkout, point `opencode.json` at the file instead of the npm sp
 Two paths run checks, build `dist/`, and publish to npm:
 
 - **Actions UI**: *Actions → Release → Run workflow* (on `main`), pick **breaking / minor / bugfix**. After validation, the workflow uses the `seankoji-com-ci` GitHub App to push the version commit to `main` and its tag atomically. The App needs permission to push to the protected branch.
-- **Tag push**: bump `package.json` via a PR, then `git tag v0.1.0 && git push origin v0.1.0`.
+- **Tag push**: bump `package.json` via a PR, then run `git tag vX.Y.Z && git push origin vX.Y.Z`, replacing `vX.Y.Z` with the matching new package version.
 
 After the build, each path publishes to npm and creates a GitHub Release on the new tag with notes auto-generated from the merged PRs since the last release.
 

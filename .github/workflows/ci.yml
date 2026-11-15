@@ -43,13 +43,18 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      # Pinned to a tag rather than actionlint's own recommended `main` ref
-      # for supply-chain reproducibility.
       # Maintained fork, not rhysd/actionlint: upstream is inactive and its
       # latest release rejects `concurrency.queue`, which the synced gatekeeper
       # caller uses (rhysd/actionlint#661 was closed unmerged). See
       # seankoji-com/.github#200.
-      - name: Download actionlint
-        id: get_actionlint
-        run: bash <(curl -s https://raw.githubusercontent.com/kjanat/actionlint/v1.16.1/scripts/download-actionlint.bash) 1.16.1
-      - run: ${{ steps.get_actionlint.outputs.executable }} -color
+      # When updating, change the version and SHA-256 together after checking
+      # the linux_amd64 asset digest on the fork's GitHub release.
+      - name: Download and verify actionlint
+        run: |
+          set -euo pipefail
+          version=1.16.1
+          archive="actionlint_${version}_linux_amd64.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" "https://github.com/kjanat/actionlint/releases/download/v${version}/${archive}"
+          echo "d566eee8af147ee1fa24ee204e1a171fcf8b5ce40e267c39a7383c7f20e6236d  $archive" | sha256sum -c -
+          tar -xzf "$archive" actionlint
+          ./actionlint -color
